@@ -10,13 +10,20 @@ BASE_URL = "http://www.nkzx.cn"
 
 #Split Article Content From HTML
 def get_content(html):
-    article = soup.find(id=container').find(id='main').find(id='content').find('table').find('tr').findAll('td')[1].findAll('div')[2]
-    title = article.findAll('div')[0].string
-    info = article.findAll('div')[1].string.split("    |    ")
+    soup = BeautifulSoup(html)
+    div = soup.findAll('div')
+    title = div[-5]
+    info = div[-4].string.split("&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;")
     pub_from = info[0].split("：")[1]
-    pub_date = info[0].split("：")[1].split("-")
-    content = article.findAll('div')[2].string  #TODO:Maybe fail.What The F**K!
-    return {"pub_from":pub_from, "pub_date":pub_date, "content":content}
+    pub_date = info[1].split("：")[1].split("-")
+    content = soup.findAll('div')[-3]
+    result = re.sub(r'<[^>]+>', '', str(content))
+    result = re.sub(r'^\n$', '', result)
+    result = re.sub(r' ', '', result)
+    content = re.sub(r'&nbsp;', ' ', result)
+    if u"正在建设" in content:
+        return {"available": False}
+    return {"pub_from":pub_from, "pub_date":pub_date, "content":content, "available":True}
 
 
 #Get Website Banners
@@ -34,7 +41,6 @@ for item in banner:
         response = urllib2.urlopen(BASE_URL+href)
         html = response.read()
         soup = BeautifulSoup(html)
-
         #Article or List?
         sign = soup.find(id=container').find(id='main').find(id='content').find('table').find('tr').findAll('td')[1].findAll('div')[1]
         if sign.get("id") == 'items':
@@ -45,6 +51,8 @@ for item in banner:
                 href = ul.find('li').find('a').get('href')
                 response = urllib2.urlopen(BASE_URL+href)
                 html = response.read()
-                get_content(html)
+                result = get_content(html)
+                print result
         else:
-            get_content(html)
+            result = get_content(html)
+            print result
